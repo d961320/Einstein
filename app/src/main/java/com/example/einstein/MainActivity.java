@@ -5,6 +5,7 @@ import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -12,11 +13,15 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
 
-    private boolean isPlaying = false;
     private AudioTrack audioTrack;
-    private Thread toneThread;
+    private Thread audioThread;
 
-    private double frequency = 440.0;
+    private boolean isPlaying = false;
+    private boolean sweepMode = false;
+
+    private double frequency = 440;
+    private double volume = 0.5;
+
     private final int sampleRate = 44100;
 
     @Override
@@ -24,39 +29,73 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button toggleButton = findViewById(R.id.toggleButton);
-        SeekBar freqSeek = findViewById(R.id.freqSeek);
-        TextView freqText = findViewById(R.id.freqText);
+        Button toggle = findViewById(R.id.toggleButton);
+        Button sweep = findViewById(R.id.sweepButton);
 
-        freqSeek.setProgress(420);
+        SeekBar freqSeek = findViewById(R.id.freqSeek);
+        SeekBar volumeSeek = findViewById(R.id.volumeSeek);
+
+        TextView freqText = findViewById(R.id.freqText);
+        EditText freqInput = findViewById(R.id.freqInput);
+
+        freqSeek.setMax(19980);
 
         freqSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
                 frequency = progress + 20;
-                freqText.setText("Frequency: " + (int) frequency + " Hz");
+                freqText.setText((int)frequency + " Hz");
+
             }
 
-            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+            public void onStartTrackingTouch(SeekBar seekBar){}
+            public void onStopTrackingTouch(SeekBar seekBar){}
         });
 
-        toggleButton.setOnClickListener(v -> {
+        volumeSeek.setMax(100);
 
-            if (!isPlaying) {
+        volumeSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                volume = progress / 100.0;
+            }
+
+            public void onStartTrackingTouch(SeekBar seekBar){}
+            public void onStopTrackingTouch(SeekBar seekBar){}
+        });
+
+        toggle.setOnClickListener(v -> {
+
+            if(!isPlaying){
                 isPlaying = true;
                 startTone();
-                toggleButton.setText("Stop Tone");
-            } else {
+                toggle.setText("Stop");
+            }else{
                 isPlaying = false;
                 stopTone();
-                toggleButton.setText("Start Tone");
+                toggle.setText("Start");
             }
 
         });
+
+        sweep.setOnClickListener(v -> {
+            sweepMode = !sweepMode;
+        });
+
+        freqInput.setOnEditorActionListener((v, actionId, event) -> {
+
+            try{
+                frequency = Double.parseDouble(freqInput.getText().toString());
+                freqText.setText((int)frequency + " Hz");
+            }catch(Exception ignored){}
+
+            return false;
+        });
+
     }
 
-    private void startTone() {
+    private void startTone(){
 
         int bufferSize = AudioTrack.getMinBufferSize(
                 sampleRate,
@@ -75,38 +114,48 @@ public class MainActivity extends AppCompatActivity {
 
         audioTrack.play();
 
-        toneThread = new Thread(() -> {
+        audioThread = new Thread(() -> {
 
             short[] buffer = new short[bufferSize];
             double phase = 0;
 
-            while (isPlaying) {
+            while(isPlaying){
 
-                for (int i = 0; i < buffer.length; i++) {
+                if(sweepMode){
+                    frequency += 1;
+                    if(frequency > 20000) frequency = 20;
+                }
 
-                    buffer[i] = (short)(Math.sin(phase) * 32767);
+                for(int i=0;i<buffer.length;i++){
 
-                    phase += 2 * Math.PI * frequency / sampleRate;
+                    double sample = Math.sin(phase) * volume;
 
-                    if (phase > 2 * Math.PI)
-                        phase -= 2 * Math.PI;
+                    buffer[i] = (short)(sample * 32767);
+
+                    phase += 2*Math.PI*frequency/sampleRate;
+
+                    if(phase > 2*Math.PI)
+                        phase -= 2*Math.PI;
 
                 }
 
-                audioTrack.write(buffer, 0, buffer.length);
+                audioTrack.write(buffer,0,buffer.length);
+
             }
 
         });
 
-        toneThread.start();
+        audioThread.start();
     }
 
-    private void stopTone() {
+    private void stopTone(){
 
-        if (audioTrack != null) {
+        if(audioTrack != null){
+
             audioTrack.stop();
             audioTrack.release();
             audioTrack = null;
+
         }
 
     }

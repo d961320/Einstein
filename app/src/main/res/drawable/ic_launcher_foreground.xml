@@ -4,21 +4,20 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Atom-agtige ringe -->
-    <path
-        android:pathData="M54,54m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0"
-        android:strokeWidth="2"
-        android:strokeColor="#FFFFFF"/>
+    <clip-path android:pathData="M54,54m-45,0a45,45 0,1 1,90 0a45,45 0,1 1,-90 0"/>
 
     <path
-        android:pathData="M54,54m-30,0a30,30 0,1 1,60 0a30,30 0,1 1,-60 0"
-        android:strokeWidth="1"
-        android:strokeColor="#FFFFFF"
-        android:fillAlpha="0.3"/>
+        android:fillColor="#000000"
+        android:pathData="M0,0h108v108h-108z"/>
 
-    <!-- Et stort E for Einstein -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M40,35 L68,35 L68,42 L48,42 L48,50 L65,50 L65,57 L48,57 L48,66 L68,66 L68,73 L40,73 Z"/>
+    <group
+        android:translateX="14"
+        android:translateY="14">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M0,0h80v80h-80z"
+            android:strokeWidth="1"/>
+        <!-- Her indsætter vi billedet som baggrund i vektoren via en bitmap reference -->
+    </group>
 
 </vector>

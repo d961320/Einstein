@@ -4,6 +4,8 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.SeekBar;
@@ -42,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
         SeekBar volumeSeek = findViewById(R.id.volumeSeek);
 
         TextView freqText = findViewById(R.id.freqText);
+        EditText manualFreqInput = findViewById(R.id.manualFreqInput);
         
         EditText sweepStartInput = findViewById(R.id.sweepStartInput);
         EditText sweepEndInput = findViewById(R.id.sweepEndInput);
@@ -50,12 +53,36 @@ public class MainActivity extends AppCompatActivity {
         freqSeek.setMax(19980);
         freqSeek.setProgress(420);
 
+        // Lytter på manuel indtastning
+        manualFreqInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (!sweepMode && manualFreqInput.hasFocus()) {
+                    try {
+                        double f = Double.parseDouble(s.toString());
+                        if (f >= 1 && f <= 22000) {
+                            frequency = f;
+                            freqText.setText((int)frequency + " Hz");
+                            freqSeek.setProgress((int)frequency - 20);
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
         freqSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser && !sweepMode) {
                     frequency = progress + 20;
                     freqText.setText((int)frequency + " Hz");
+                    manualFreqInput.setText(String.valueOf((int)frequency));
                 }
             }
             public void onStartTrackingTouch(SeekBar seekBar){}
@@ -91,16 +118,16 @@ public class MainActivity extends AppCompatActivity {
                 sweepEnd = Double.parseDouble(sweepEndInput.getText().toString());
                 double speedHzPerSec = Double.parseDouble(sweepSpeedInput.getText().toString());
                 
-                // Beregn hvor meget frekvensen skal stige pr buffer (ca. 100ms afhængig af buffer)
-                // En mere præcis måde er at gøre det i audio-loopet pr sample, men dette er nemmere:
                 sweepStepPerBuffer = speedHzPerSec * 0.05; 
 
                 sweepMode = !sweepMode;
                 if (sweepMode) {
                     sweepBtn.setText("Stop Sweep");
                     frequency = sweepStart;
+                    manualFreqInput.setEnabled(false); // Deaktiver manuel input under sweep
                 } else {
                     sweepBtn.setText("Aktiver Sweep");
+                    manualFreqInput.setEnabled(true);
                 }
             } catch (Exception e) {
                 Toast.makeText(this, "Tjek dine talværdier", Toast.LENGTH_SHORT).show();
@@ -136,7 +163,6 @@ public class MainActivity extends AppCompatActivity {
                     frequency += (sweepStepPerBuffer / (sampleRate / (double)bufferSize));
                     if(frequency > sweepEnd) frequency = sweepStart;
                     
-                    // Opdater UI teksten (skal gøres på main thread)
                     final int currentFreq = (int)frequency;
                     runOnUiThread(() -> freqDisplay.setText(currentFreq + " Hz"));
                 }

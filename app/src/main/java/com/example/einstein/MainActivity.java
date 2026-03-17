@@ -8,6 +8,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -16,11 +17,16 @@ public class MainActivity extends AppCompatActivity {
     private AudioTrack audioTrack;
     private Thread audioThread;
 
-    private boolean isPlaying = false;
-    private boolean sweepMode = false;
+    private volatile boolean isPlaying = false;
+    private volatile boolean sweepMode = false;
 
     private double frequency = 440;
     private double volume = 0.5;
+
+    // Sweep indstillinger
+    private double sweepStart = 20;
+    private double sweepEnd = 20000;
+    private double sweepStepPerBuffer = 1;
 
     private final int sampleRate = 44100;
 
@@ -30,73 +36,79 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         Button toggle = findViewById(R.id.toggleButton);
-        Button sweep = findViewById(R.id.sweepButton);
+        Button sweepBtn = findViewById(R.id.sweepButton);
 
         SeekBar freqSeek = findViewById(R.id.freqSeek);
         SeekBar volumeSeek = findViewById(R.id.volumeSeek);
 
         TextView freqText = findViewById(R.id.freqText);
-        EditText freqInput = findViewById(R.id.freqInput);
+        
+        EditText sweepStartInput = findViewById(R.id.sweepStartInput);
+        EditText sweepEndInput = findViewById(R.id.sweepEndInput);
+        EditText sweepSpeedInput = findViewById(R.id.sweepSpeedInput);
 
         freqSeek.setMax(19980);
+        freqSeek.setProgress(420);
 
         freqSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-
-                frequency = progress + 20;
-                freqText.setText((int)frequency + " Hz");
-
+                if (fromUser && !sweepMode) {
+                    frequency = progress + 20;
+                    freqText.setText((int)frequency + " Hz");
+                }
             }
-
             public void onStartTrackingTouch(SeekBar seekBar){}
             public void onStopTrackingTouch(SeekBar seekBar){}
         });
 
         volumeSeek.setMax(100);
-
+        volumeSeek.setProgress(50);
         volumeSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 volume = progress / 100.0;
             }
-
             public void onStartTrackingTouch(SeekBar seekBar){}
             public void onStopTrackingTouch(SeekBar seekBar){}
         });
 
         toggle.setOnClickListener(v -> {
-
             if(!isPlaying){
                 isPlaying = true;
                 startTone();
-                toggle.setText("Stop");
+                toggle.setText("Stop Lyd");
             }else{
                 isPlaying = false;
                 stopTone();
-                toggle.setText("Start");
+                toggle.setText("Start Lyd");
             }
-
         });
 
-        sweep.setOnClickListener(v -> {
-            sweepMode = !sweepMode;
+        sweepBtn.setOnClickListener(v -> {
+            try {
+                sweepStart = Double.parseDouble(sweepStartInput.getText().toString());
+                sweepEnd = Double.parseDouble(sweepEndInput.getText().toString());
+                double speedHzPerSec = Double.parseDouble(sweepSpeedInput.getText().toString());
+                
+                // Beregn hvor meget frekvensen skal stige pr buffer (ca. 100ms afhængig af buffer)
+                // En mere præcis måde er at gøre det i audio-loopet pr sample, men dette er nemmere:
+                sweepStepPerBuffer = speedHzPerSec * 0.05; 
+
+                sweepMode = !sweepMode;
+                if (sweepMode) {
+                    sweepBtn.setText("Stop Sweep");
+                    frequency = sweepStart;
+                } else {
+                    sweepBtn.setText("Aktiver Sweep");
+                }
+            } catch (Exception e) {
+                Toast.makeText(this, "Tjek dine talværdier", Toast.LENGTH_SHORT).show();
+            }
         });
-
-        freqInput.setOnEditorActionListener((v, actionId, event) -> {
-
-            try{
-                frequency = Double.parseDouble(freqInput.getText().toString());
-                freqText.setText((int)frequency + " Hz");
-            }catch(Exception ignored){}
-
-            return false;
-        });
-
     }
 
     private void startTone(){
-
         int bufferSize = AudioTrack.getMinBufferSize(
                 sampleRate,
                 AudioFormat.CHANNEL_OUT_MONO,
@@ -115,48 +127,42 @@ public class MainActivity extends AppCompatActivity {
         audioTrack.play();
 
         audioThread = new Thread(() -> {
-
             short[] buffer = new short[bufferSize];
             double phase = 0;
+            TextView freqDisplay = findViewById(R.id.freqText);
 
             while(isPlaying){
-
                 if(sweepMode){
-                    frequency += 1;
-                    if(frequency > 20000) frequency = 20;
+                    frequency += (sweepStepPerBuffer / (sampleRate / (double)bufferSize));
+                    if(frequency > sweepEnd) frequency = sweepStart;
+                    
+                    // Opdater UI teksten (skal gøres på main thread)
+                    final int currentFreq = (int)frequency;
+                    runOnUiThread(() -> freqDisplay.setText(currentFreq + " Hz"));
                 }
 
-                for(int i=0;i<buffer.length;i++){
-
+                for(int i=0; i<buffer.length; i++){
                     double sample = Math.sin(phase) * volume;
-
                     buffer[i] = (short)(sample * 32767);
-
-                    phase += 2*Math.PI*frequency/sampleRate;
-
-                    if(phase > 2*Math.PI)
-                        phase -= 2*Math.PI;
-
+                    phase += 2 * Math.PI * frequency / sampleRate;
+                    if(phase > 2 * Math.PI) phase -= 2 * Math.PI;
                 }
-
-                audioTrack.write(buffer,0,buffer.length);
-
+                audioTrack.write(buffer, 0, buffer.length);
             }
-
         });
-
         audioThread.start();
     }
 
     private void stopTone(){
-
+        isPlaying = false;
+        if(audioThread != null) {
+            try { audioThread.join(); } catch (InterruptedException e) {}
+            audioThread = null;
+        }
         if(audioTrack != null){
-
             audioTrack.stop();
             audioTrack.release();
             audioTrack = null;
-
         }
-
     }
 }

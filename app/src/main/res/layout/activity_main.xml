@@ -12,16 +12,15 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="24dp"
-        android:paddingTop="120dp"
+        android:paddingTop="40dp"
         tools:context=".MainActivity">
 
         <TextView
             android:id="@+id/freqText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
             android:text="440 Hz"
-            android:textSize="28sp"
+            android:textSize="32sp"
             android:textStyle="bold"
             android:layout_gravity="center_horizontal"/>
 
@@ -31,36 +30,76 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp" />
 
-        <EditText
-            android:id="@+id/freqInput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:hint="Indtast frekvens (Hz)"
-            android:inputType="number"
-            android:textAlignment="center"/>
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="24dp"
             android:text="Lydstyrke"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:layout_gravity="center_horizontal"/>
 
         <SeekBar
             android:id="@+id/volumeSeek"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="4dp"
             android:progress="50" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#CCCCCC"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sweep Indstillinger"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:layout_gravity="center_horizontal"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <EditText
+                android:id="@+id/sweepStartInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Start (Hz)"
+                android:inputType="number"
+                android:text="20"/>
+
+            <EditText
+                android:id="@+id/sweepEndInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Slut (Hz)"
+                android:inputType="number"
+                android:text="20000"/>
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/sweepSpeedInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Hastighed (stigning pr. sek)"
+            android:inputType="numberDecimal"
+            android:text="100"/>
 
         <Button
             android:id="@+id/toggleButton"
             android:layout_width="match_parent"
             android:layout_height="60dp"
-            android:layout_marginTop="40dp"
-            android:text="Start"
+            android:layout_marginTop="24dp"
+            android:text="Start Lyd"
             android:textSize="18sp" />
 
         <Button
@@ -68,7 +107,7 @@
             android:layout_width="match_parent"
             android:layout_height="60dp"
             android:layout_marginTop="12dp"
-            android:text="Sweep Mode"
+            android:text="Aktiver Sweep"
             android:textSize="18sp" />
 
     </LinearLayout>
